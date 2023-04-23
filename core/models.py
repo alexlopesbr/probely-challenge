@@ -12,7 +12,7 @@ class Finding(models.Model):
         ('HEAD', 'HEAD'),
     ]
 
-    target_id = models.IntegerField(unique=True)
+    target_id = models.TextField()
     definition_id = models.TextField()
     scans = models.JSONField(default=list, blank=True)
     url = models.URLField()
