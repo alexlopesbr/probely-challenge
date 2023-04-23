@@ -20,35 +20,45 @@ class Command(BaseCommand):
         headers = {'Authorization': f'JWT {str(os.getenv("KEY_ACCESS"))}'}
         params = {'page': 1}
 
-        self.stdout.write('Performing request')
+        while True:
+            response = self.response(main_url, headers, params)
+            if response.status_code == 200:
+                response = response.json()
+                results = response.get('results')
+                page_total = response.get('page_total')
+                current_page = response.get('page')
 
-        response = requests.get(main_url, headers=headers, params=params)
-        if response.status_code == 200:
-            response = response.json()
-            results = response.get('results')
+            self.stdout.write(f'Performing request page {params["page"]} of {page_total}')
 
-        self.stdout.write('Preparing data')
-        with transaction.atomic():
-            findings_to_create = []
+            with transaction.atomic():
+                findings_to_create = []
 
-            for result in results:
-                if result and (result.get('target', {}).get('id') == target_id_to_be_save):
-                    target_id: str = result.get('target', {}).get('id')
-                    definition_id: str = result.get('definition', {}).get('id')
-                    scans: list = result.get('scans', [])
-                    url: str = result.get('url')
-                    path: str = result.get('path')
-                    method: str = result.get('method')
+                for result in results:
+                    if result and (result.get('target', {}).get('id') == target_id_to_be_save):
+                        target_id: str = result.get('target', {}).get('id')
+                        definition_id: str = result.get('definition', {}).get('id')
+                        scans: list = result.get('scans', [])
+                        url: str = result.get('url')
+                        path: str = result.get('path')
+                        method: str = result.get('method')
 
-                    finding = Finding(
-                        target_id=target_id,
-                        definition_id=definition_id,
-                        scans=scans,
-                        url=url,
-                        path=path,
-                        method=method
-                    )
-                    findings_to_create.append(finding)
+                        finding = Finding(
+                            target_id=target_id,
+                            definition_id=definition_id,
+                            scans=scans,
+                            url=url,
+                            path=path,
+                            method=method
+                        )
+                        findings_to_create.append(finding)
 
-            Finding.objects.bulk_create(findings_to_create)
+                Finding.objects.bulk_create(findings_to_create)
+
+            if page_total == current_page:
+                break
+
+            params['page'] = current_page + 1
         self.stdout.write('Data saved')
+
+    def response(self, main_url, headers, params):
+        return requests.get(main_url, headers=headers, params=params)
