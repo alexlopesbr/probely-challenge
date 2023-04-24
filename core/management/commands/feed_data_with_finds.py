@@ -43,6 +43,7 @@ class Command(BaseCommand):
         findings_to_create = []
 
         for result in results:
+            #  checks if there is a callback and if the target id is the same as expected
             if result and (result.get('target', {}).get('id') == target_id_to_be_save):
                 target_id: str = result.get('target', {}).get('id')
                 definition_id: str = result.get('definition', {}).get('id')
